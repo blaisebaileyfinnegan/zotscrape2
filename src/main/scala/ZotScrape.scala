@@ -34,6 +34,8 @@ object ZotScrape extends App {
     if (chooseRecentQuarter) List(quarters.head)
     else potentialQuarters
 
-  val collectorService = system.actorOf(Props(classOf[CollectorService], targetQuarters, departments, baseUrl, debug), "CollectorService")
+  val collectorService = system.actorOf(
+    Props(classOf[CollectorService], targetQuarters, departments, baseUrl, debug),
+    "CollectorService")
   collectorService ! StartScraper
 }

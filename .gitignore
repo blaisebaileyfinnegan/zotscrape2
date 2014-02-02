@@ -15,3 +15,5 @@ target/
 .classpath
 .project
 .settings
+.DS_Store
+RUNNING_PID

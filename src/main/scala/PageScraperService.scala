@@ -1,11 +1,13 @@
 import akka.actor.{Props, ActorLogging, Actor}
 import CollectorService._
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
 import scalaj.http.Http
+import akka.pattern.pipe
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object PageScraperService {
   case class StartScrapingPage(todo: Todo)
+
+  case class Done(result: WebSoc)
 }
 
 class PageScraperService(baseUrl: String) extends Actor with ActorLogging {
@@ -18,13 +20,23 @@ class PageScraperService(baseUrl: String) extends Actor with ActorLogging {
       .param("FullCourses", "ANY")
       .param("ClassType", "ALL")
       .param("Division", "ANY")
+      .param("Breadth", "ANY")
       .param("ShowFinals", "on")
+      .param("MaxCap", "")
+      .param("CourseNum", "")
+      .param("CourseCodes", "")
+      .param("InstrName", "")
+      .param("CourseTitle", "")
+      .param("Units", "")
+      .param("Days", "")
+      .param("FullCourses", "ANY")
       .param("CancelledCourses", "Exclude")
       .asXml
 
   def receive = {
     case StartScrapingPage(Todo(quarter, department)) => {
-      DocumentParser(getDocument(quarter, department))
+      log.info("Scraping " + department + " in " + quarter)
+      DocumentParser(getDocument(quarter, department)) pipeTo sender
     }
   }
 }
