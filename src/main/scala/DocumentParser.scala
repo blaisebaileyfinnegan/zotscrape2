@@ -65,7 +65,10 @@ object DocumentParser extends Logging {
     val endsInPm = index > -1
 
     val beginRaw = begin
-    val endRaw = if (endsInPm) end.substring(0, index) else end
+    val endRaw =
+      if (endsInPm) end.substring(0, index)
+      else if (end.endsWith("am")) end.substring(0, end.size - 2)
+      else end
 
     val beginSplits = beginRaw.split(":")
     val endSplits = endRaw.split(":")

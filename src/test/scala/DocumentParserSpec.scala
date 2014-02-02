@@ -163,6 +163,7 @@ class DocumentParserSpec extends FlatSpec with Matchers {
     parseTimeInstants("11:50", "12:30p") should be ((1150, 1230))
     parseTimeInstants("12:30", "1:50p") should be ((1230, 1350))
     parseTimeInstants("5:00", "7:50") should be ((500, 750))
+    parseTimeInstants("8:00", "10:00am") should be ((800, 1000))
   }
 
   "parseTime" should "parse time nodes" in {
