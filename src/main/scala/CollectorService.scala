@@ -8,41 +8,42 @@ import scala.concurrent.Future
 
 object CollectorService {
   case class Todo(quarter: String, department: String, retryCount: Int = 0)
-
-  case object StartScraper
+  case object Done
 }
 
-class CollectorService(quarters: List[String], departments: List[String], baseUrl: String, debug: Boolean)
+class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl: String, debug: Boolean)
   extends Actor with ActorLogging {
   import CollectorService._
-  import PageScraperService._
+  import Scraper._
+  import Conductor._
+  import ZotScrape._
 
   val cpuCount = Runtime.getRuntime.availableProcessors()
-  val pageScraper = context.actorOf(Props(classOf[PageScraperService], baseUrl, self)
+  val pageScraper = context.actorOf(Props(classOf[Scraper], baseUrl, self)
     .withRouter(SmallestMailboxRouter(cpuCount)), "PageScraperService")
 
   var awaiting = 0
+  var totalParsingTime: Long = 0 // Excluding I/O
   var timeBegan: Long = 0
+
   val failedPages: ListBuffer[String] = ListBuffer()
 
-  def shutdown() = {
+  override def postStop() = {
     if (failedPages.isEmpty) log.info("All pages were successfully scraped.")
     else log.error("Scrapes failed on the following departments: " + failedPages)
 
     log.info("We took " + ((System.currentTimeMillis() - timeBegan) / 1000.0) + " seconds to finish.")
-    log.info("Shutting down collector service.")
-
-    context.system.shutdown()
+    log.info("We spent " + (totalParsingTime / 1000.0) + " seconds parsing.")
   }
 
   def receive = {
-    case StartScraper => {
+    case StartCollectorService => {
       val pairs = for {
         quarter <- quarters
         department <- departments
       } yield Todo(quarter, department)
 
-      val left: List[Todo] = if (debug) List(pairs.head) else pairs
+      val left: List[Todo] = if (debug) List(pairs.head) else pairs.toList
       awaiting = left.size
       timeBegan = System.currentTimeMillis()
 
@@ -58,18 +59,22 @@ class CollectorService(quarters: List[String], departments: List[String], baseUr
       if (tryCount < 3) pageScraper ! StartScrapingPage(Todo(quarter, department, tryCount + 1))
       else self ! ScrapingFailed(Todo(quarter, department, tryCount))
 
-    case result: WebSoc => {
-      awaiting = awaiting - 1
+    case ScrapingDone(websoc, time) => {
+      totalParsingTime += time
+      awaiting -= 1
+
       log.info(awaiting + " left.")
-      if (awaiting == 0) shutdown()
+
+      if (awaiting == 0) context.parent ! Done
     }
+
     case ScrapingFailed(Todo(quarter, department, retryCount)) => {
-      awaiting = awaiting - 1
+      awaiting -= 1
       log.error(department + " failed after " + retryCount + " tries!")
 
       failedPages += department
 
-      if (awaiting == 0) shutdown()
+      if (awaiting == 0) context.parent ! Done
     }
     case x => {
       log.error("Unhandled message in collector service: " + x)
