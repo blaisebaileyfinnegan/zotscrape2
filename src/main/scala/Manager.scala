@@ -8,28 +8,31 @@ import org.jsoup.nodes.{Element, Document}
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object Conductor {
+object Manager {
   case object StartCollectorService
   case object StartWriterService
 
   case object Shutdown
 }
 
-class Conductor(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
+class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
   extends Actor with ActorLogging {
   import ZotScrape._
-  import Conductor._
+  import Manager._
 
-  override def postStop() = log.info("Conductor going down.")
+  var collectorServiceDone = false
+  var databaseServiceDone = false
 
   def receive = {
-    case CollectorService.Done =>
-      system.shutdown()
+    case CollectorService.Done => {
+      collectorServiceDone = true
+      if (databaseServiceDone) system.shutdown()
+    }
 
     case StartConductor => {
       val chooseRecentQuarter = potentialQuarters.isEmpty
 
-      def getDocument() = Future {
+      lazy val getDocument = Future {
         log.info("Retrieving quarters and departments...")
         Jsoup.parse(Http(baseUrl).options(HttpOptions.connTimeout(5000)).asString)
       }
@@ -43,7 +46,14 @@ class Conductor(baseUrl: String, potentialQuarters: List[String], debug: Boolean
         else selects(0).children().toList.map(_.attr("value")).map(_.trim)
       }
 
-      getDocument() onComplete {
+      val writerService = context.actorOf(
+        Props(classOf[WriterService]),
+        "WriterService"
+      )
+
+      writerService ! StartWriterService
+
+      getDocument onComplete {
         case Success(document) => {
           val quarters = getDropdownValues(document, _.attr("name") == "YearTerm")
           val departments = getDropdownValues(document, _.attr("name") == "Dept")
@@ -59,7 +69,7 @@ class Conductor(baseUrl: String, potentialQuarters: List[String], debug: Boolean
             "CollectorService"
           )
 
-          collectorService ! StartCollectorService
+          //collectorService ! StartCollectorService
         }
         case _ => {
           log.error("Could not retrieve quarters and departments!")

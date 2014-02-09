@@ -1,9 +1,6 @@
 import akka.actor.{Props, ActorLogging, Actor}
 import akka.routing.{SmallestMailboxRouter, RoundRobinRouter}
-import com.typesafe.scalalogging.slf4j.Logger
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
 
 
 object CollectorService {
@@ -14,12 +11,12 @@ object CollectorService {
 class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl: String, debug: Boolean)
   extends Actor with ActorLogging {
   import CollectorService._
-  import Scraper._
-  import Conductor._
+  import ScraperWorker._
+  import Manager._
   import ZotScrape._
 
   val cpuCount = Runtime.getRuntime.availableProcessors()
-  val pageScraper = context.actorOf(Props(classOf[Scraper], baseUrl, self)
+  val pageScraper = context.actorOf(Props(classOf[ScraperWorker], baseUrl, self)
     .withRouter(SmallestMailboxRouter(cpuCount)), "PageScraperService")
 
   var awaiting = 0
@@ -59,7 +56,7 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
       if (tryCount < 3) pageScraper ! StartScrapingPage(Todo(quarter, department, tryCount + 1))
       else self ! ScrapingFailed(Todo(quarter, department, tryCount))
 
-    case ScrapingDone(websoc, time) => {
+    case ScrapingDone(quarter, department, websoc, time) => {
       totalParsingTime += time
       awaiting -= 1
 

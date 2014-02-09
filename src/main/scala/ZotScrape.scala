@@ -18,7 +18,7 @@ object ZotScrape extends App {
 
   val system = ActorSystem("zotscrape-system")
   val conductor = system.actorOf(
-    Props(classOf[Conductor], baseUrl, potentialQuarters, debug),
+    Props(classOf[Manager], baseUrl, potentialQuarters, debug),
     "Conductor"
   )
 

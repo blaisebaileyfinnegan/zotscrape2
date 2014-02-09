@@ -12,7 +12,9 @@ libraryDependencies ++= Seq(
   "org.jsoup" % "jsoup" % "1.7.2",
   "org.scalaj" %% "scalaj-http" % "0.3.12",
   "com.github.nscala-time" %% "nscala-time" % "0.6.0",
-  "com.typesafe" %% "scalalogging-slf4j" % "1.0.1"
+  "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
+  "com.typesafe.slick" %% "slick" % "2.0.0",
+  "mysql" % "mysql-connector-java" % "5.1.12"
 )
 
 ScoverageSbtPlugin.instrumentSettings

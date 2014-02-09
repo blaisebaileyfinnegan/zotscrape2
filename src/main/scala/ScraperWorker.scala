@@ -6,16 +6,16 @@ import scalaj.http.{HttpOptions, HttpException, Http}
 import akka.pattern.pipe
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object Scraper {
+object ScraperWorker {
   case class StartScrapingPage(todo: Todo)
   case class ScrapingFailed(todo: Todo)
-  case class ScrapingDone(websoc: WebSoc, time: Long)
+  case class ScrapingDone(quarter: String, department: String, websoc: WebSoc, time: Long)
 
   var times = 0
 }
 
-class Scraper(baseUrl: String, collectorService: ActorRef) extends Actor with ActorLogging {
-  import Scraper._
+class ScraperWorker(baseUrl: String, collectorService: ActorRef) extends Actor with ActorLogging {
+  import ScraperWorker._
 
   def getDocument(quarter: String, department: String): Future[xml.Elem] = Future {
     Http(baseUrl).options(HttpOptions.connTimeout(2000))
@@ -65,7 +65,7 @@ class Scraper(baseUrl: String, collectorService: ActorRef) extends Actor with Ac
         DocumentParser(x)
       }) onComplete {
         case Success(websoc) =>
-          collectorService ! ScrapingDone(websoc, System.currentTimeMillis() - beginTime)
+          collectorService ! ScrapingDone(quarter, department, websoc, System.currentTimeMillis() - beginTime)
         case Failure(x) => x match {
           case _: java.net.SocketTimeoutException => retry()
           case _: HttpException => retry()
