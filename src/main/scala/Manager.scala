@@ -1,7 +1,8 @@
-import akka.actor.{ActorRef, Props, ActorLogging, Actor}
+import akka.actor._
 import java.io.IOException
 import org.jsoup.Jsoup
 import scala.concurrent.Future
+import scala.util.Success
 import scala.util.{Success, Failure}
 import scalaj.http.{HttpOptions, Http}
 import org.jsoup.nodes.{Element, Document}
@@ -10,7 +11,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Manager {
   case object StartCollectorService
-  case object StartWriterService
+  case class StartWriterService(timestamp: java.sql.Timestamp)
 
   case object Shutdown
 }
@@ -21,15 +22,33 @@ class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
   import Manager._
 
   var collectorServiceDone = false
-  var databaseServiceDone = false
+  var writerServiceDone = false
+
+  val writerService = context.actorOf(
+    Props(classOf[WriterService]),
+    "WriterService"
+  )
 
   def receive = {
     case CollectorService.Done => {
       collectorServiceDone = true
-      if (databaseServiceDone) system.shutdown()
+      sender ! PoisonPill
+
+      writerService ! CollectorService.Done
+    }
+
+    case WriterService.Done => {
+      writerServiceDone = true
+      sender ! PoisonPill
+
+      system.shutdown()
     }
 
     case StartConductor => {
+      writerService ! StartWriterService(new java.sql.Timestamp(new java.util.Date().getTime))
+    }
+
+    case WriterService.Ready => {
       val chooseRecentQuarter = potentialQuarters.isEmpty
 
       lazy val getDocument = Future {
@@ -46,13 +65,6 @@ class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
         else selects(0).children().toList.map(_.attr("value")).map(_.trim)
       }
 
-      val writerService = context.actorOf(
-        Props(classOf[WriterService]),
-        "WriterService"
-      )
-
-      writerService ! StartWriterService
-
       getDocument onComplete {
         case Success(document) => {
           val quarters = getDropdownValues(document, _.attr("name") == "YearTerm")
@@ -65,17 +77,21 @@ class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
             else potentialQuarters
 
           val collectorService = context.actorOf(
-            Props(classOf[CollectorService], targetQuarters, departments, baseUrl, debug),
+            Props(classOf[CollectorService], targetQuarters, departments, baseUrl, debug, writerService),
             "CollectorService"
           )
 
-          //collectorService ! StartCollectorService
+          collectorService ! StartCollectorService
         }
         case _ => {
           log.error("Could not retrieve quarters and departments!")
           system.shutdown()
         }
       }
+    }
+
+    case x => {
+      log.error("unknown message sent to manager: " + x)
     }
   }
 }

@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "com.github.nscala-time" %% "nscala-time" % "0.6.0",
   "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
   "com.typesafe.slick" %% "slick" % "2.0.0",
-  "mysql" % "mysql-connector-java" % "5.1.12"
+  "mysql" % "mysql-connector-java" % "5.1.29"
 )
 
 ScoverageSbtPlugin.instrumentSettings

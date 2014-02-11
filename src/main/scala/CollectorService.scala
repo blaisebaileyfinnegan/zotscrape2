@@ -1,4 +1,4 @@
-import akka.actor.{Props, ActorLogging, Actor}
+import akka.actor.{ActorRef, Props, ActorLogging, Actor}
 import akka.routing.{SmallestMailboxRouter, RoundRobinRouter}
 import scala.collection.mutable.ListBuffer
 
@@ -8,7 +8,7 @@ object CollectorService {
   case object Done
 }
 
-class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl: String, debug: Boolean)
+class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl: String, debug: Boolean, writerService: ActorRef)
   extends Actor with ActorLogging {
   import CollectorService._
   import ScraperWorker._
@@ -61,6 +61,8 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
       awaiting -= 1
 
       log.info(awaiting + " left.")
+
+      writerService ! WriterService.WriteDocument(quarter, department, websoc)
 
       if (awaiting == 0) context.parent ! Done
     }
