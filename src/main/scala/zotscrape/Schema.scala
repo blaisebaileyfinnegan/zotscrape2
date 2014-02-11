@@ -1,4 +1,6 @@
-import scala.slick.driver.MySQLDriver.simple._
+package zotscrape
+
+import slick.driver.MySQLDriver.simple._
 
 /**
  * (Term)

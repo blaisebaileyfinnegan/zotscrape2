@@ -1,9 +1,11 @@
+package zotscrape
+
 import com.typesafe.scalalogging.slf4j.Logging
-import scala.concurrent.{ExecutionContext, Future}
-import scala.xml._
+import scala.xml.{Elem, Node}
+import scala.Some
+import scala.concurrent.Future
 import WebSoc._
-import scala.language.implicitConversions
-import ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object DocumentParser extends Logging {
 
@@ -129,7 +131,6 @@ object DocumentParser extends Logging {
     val units = groups("sec_units")
     val instructors = groups("sec_instructors").headOption.map(_.child.map(_.text.trim).filter(_.size > 0)).getOrElse(Seq.empty)
     val meetings = groups("sec_meetings").flatMap(_.child.filter(_.text.trim.size > 0).map(parseMeeting))
-    println(groups("sec_final"))
     val sectionFinal = groups("sec_final").headOption.map(parseFinal)
     val enrollment = groups("sec_enrollment").headOption.map(parseEnrollment)
     val restrictions = groups("sec_restrictions")

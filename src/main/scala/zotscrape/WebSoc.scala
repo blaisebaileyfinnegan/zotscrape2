@@ -1,3 +1,5 @@
+package zotscrape
+
 import WebSoc._
 
 object WebSoc {

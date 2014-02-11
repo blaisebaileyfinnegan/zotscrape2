@@ -1,3 +1,5 @@
+package zotscrape
+
 import org.scalatest._
 import scala.concurrent.ExecutionContext.Implicits.global
 

@@ -1,3 +1,5 @@
+package zotscrape
+
 import akka.actor.{ActorRef, Props, ActorLogging, Actor}
 import CollectorService._
 import scala.concurrent.Future

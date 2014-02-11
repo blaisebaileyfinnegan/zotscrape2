@@ -1,5 +1,7 @@
-import akka.actor.{ActorRef, Props, ActorLogging, Actor}
-import akka.routing.{SmallestMailboxRouter, RoundRobinRouter}
+package zotscrape
+
+import akka.actor.{Props, ActorLogging, Actor}
+import akka.routing.SmallestMailboxRouter
 import scala.collection.mutable.ListBuffer
 
 
@@ -8,12 +10,11 @@ object CollectorService {
   case object Done
 }
 
-class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl: String, debug: Boolean, writerService: ActorRef)
+class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl: String, debug: Boolean)
   extends Actor with ActorLogging {
   import CollectorService._
   import ScraperWorker._
   import Manager._
-  import ZotScrape._
 
   val cpuCount = Runtime.getRuntime.availableProcessors()
   val pageScraper = context.actorOf(Props(classOf[ScraperWorker], baseUrl, self)
@@ -62,7 +63,7 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
 
       log.info(awaiting + " left.")
 
-      writerService ! WriterService.WriteDocument(quarter, department, websoc)
+      context.parent ! WriterService.WriteDocument(quarter, department, websoc)
 
       if (awaiting == 0) context.parent ! Done
     }

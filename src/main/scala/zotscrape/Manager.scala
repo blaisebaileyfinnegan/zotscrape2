@@ -1,35 +1,38 @@
+package zotscrape
+
 import akka.actor._
 import java.io.IOException
 import org.jsoup.Jsoup
 import scala.concurrent.Future
-import scala.util.Success
-import scala.util.{Success, Failure}
 import scalaj.http.{HttpOptions, Http}
 import org.jsoup.nodes.{Element, Document}
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Success
 
 object Manager {
+  case object Start
   case object StartCollectorService
-  case class StartWriterService(timestamp: java.sql.Timestamp)
+  case object StartWriterService
 
   case object Shutdown
 }
 
-class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
+class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean, jdbcUrl: String, username: String, password: String, timestamp: java.sql.Timestamp)
   extends Actor with ActorLogging {
-  import ZotScrape._
   import Manager._
 
   var collectorServiceDone = false
   var writerServiceDone = false
 
   val writerService = context.actorOf(
-    Props(classOf[WriterService]),
+    Props(classOf[WriterService], jdbcUrl, username, password, timestamp),
     "WriterService"
   )
 
   def receive = {
+    case document: WriterService.WriteDocument => writerService ! document
+
     case CollectorService.Done => {
       collectorServiceDone = true
       sender ! PoisonPill
@@ -41,11 +44,11 @@ class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
       writerServiceDone = true
       sender ! PoisonPill
 
-      system.shutdown()
+      context.system.shutdown()
     }
 
-    case StartConductor => {
-      writerService ! StartWriterService(new java.sql.Timestamp(new java.util.Date().getTime))
+    case Start => {
+      writerService ! StartWriterService
     }
 
     case WriterService.Ready => {
@@ -77,7 +80,7 @@ class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
             else potentialQuarters
 
           val collectorService = context.actorOf(
-            Props(classOf[CollectorService], targetQuarters, departments, baseUrl, debug, writerService),
+            Props(classOf[CollectorService], targetQuarters, departments, baseUrl, debug),
             "CollectorService"
           )
 
@@ -85,7 +88,7 @@ class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean)
         }
         case _ => {
           log.error("Could not retrieve quarters and departments!")
-          system.shutdown()
+          context.system.shutdown()
         }
       }
     }
