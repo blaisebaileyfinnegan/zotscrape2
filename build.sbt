@@ -4,6 +4,8 @@ version := "1.0"
 
 scalaVersion := "2.10.3"
 
+resolvers += "Twitter" at "http://maven.twttr.com"
+
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.2.1",
   "com.typesafe.akka" %% "akka-testkit" % "2.2.1",
@@ -15,7 +17,8 @@ libraryDependencies ++= Seq(
   "com.github.nscala-time" %% "nscala-time" % "0.6.0",
   "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
   "com.typesafe.slick" %% "slick" % "2.0.0",
-  "mysql" % "mysql-connector-java" % "5.1.29"
+  "mysql" % "mysql-connector-java" % "5.1.29",
+  "com.twitter" %% "finatra" % "1.5.2"
 )
 
 ScoverageSbtPlugin.instrumentSettings

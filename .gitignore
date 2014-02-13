@@ -8,6 +8,7 @@
 *-shim.sbt
 .idea/
 /project/plugins/project
+src/main/resources/public/components
 project/boot
 target/
 /logs
