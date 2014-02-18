@@ -1,0 +1,20 @@
+{
+  "name": "zotscrape2",
+  "version": "0.0.0",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/blaisebaileyfinnegan/zotscrape2.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/blaisebaileyfinnegan/zotscrape2/issues"
+  },
+  "homepage": "https://github.com/blaisebaileyfinnegan/zotscrape2",
+  "devDependencies": {
+    "grunt": "~0.4.2",
+    "grunt-contrib-watch": "~0.5.3"
+  }
+}

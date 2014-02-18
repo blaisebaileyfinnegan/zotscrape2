@@ -100,7 +100,7 @@ object Schema {
     def course = foreignKey("course_fk", courseId, courses)(_.id)
     def term = foreignKey("term_fk", termId, terms)(_.id)
     def timestamps = foreignKey("section_history_fk", timestamp, history)(_.timestamp)
-    def uniq = index("section_unique", (courseId, timestamp, termId, ccode), unique = true)
+    def uniq = index("section_unique", (timestamp, termId, ccode), unique = true)
 
     def * = (id, courseId, termId, timestamp, ccode, typ, num, units, booksLink, graded, status)
   }
@@ -116,25 +116,22 @@ object Schema {
 
   val restrictions = TableQuery[Restriction]
 
-  class SectionRestriction(tag: Tag) extends Table[(Int, java.sql.Timestamp, String)](tag, "section2restrictions") {
+  class SectionRestriction(tag: Tag) extends Table[(Int, String)](tag, "section2restrictions") {
     def sectionId = column[Int]("section_id")
-    def timestamp = column[java.sql.Timestamp]("timestamp")
     def restrictionCode = column[String]("restriction_code")
 
-    def pk = primaryKey("section2restrictions_pk", (sectionId, timestamp, restrictionCode))
+    def pk = primaryKey("section2restrictions_pk", (sectionId, restrictionCode))
     def section = foreignKey("section2restrictions_section_fk", sectionId, sections)(_.id)
-    def timestamps = foreignKey("section2restrictions_timestamp_fk", timestamp, history)(_.timestamp)
     def restriction = foreignKey("section2restrictions_restriction_fk", restrictionCode, restrictions)(_.code)
 
-    def * = (sectionId, timestamp, restrictionCode)
+    def * = (sectionId, restrictionCode)
   }
 
   val sectionRestrictions = TableQuery[SectionRestriction]
 
-  class Meeting(tag: Tag) extends Table[(Int, Int, java.sql.Timestamp, Option[Int], Option[Int], Option[String], Option[String], Option[String], WebSoc.Days)](tag, "meetings") {
+  class Meeting(tag: Tag) extends Table[(Int, Int, Option[Int], Option[Int], Option[String], Option[String], Option[String], WebSoc.Days)](tag, "meetings") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def sectionId = column[Int]("section_id")
-    def timestamp = column[java.sql.Timestamp]("timestamp")
     def begin = column[Option[Int]]("begin")
     def end = column[Option[Int]]("end")
     def building = column[Option[String]]("building")
@@ -149,49 +146,43 @@ object Schema {
     def saturday = column[Boolean]("saturday")
 
     def section = foreignKey("section_meeting_fk", sectionId, sections)(_.id)
-    def timestamps = foreignKey("meeting_timestamp_fk", timestamp, history)(_.timestamp)
 
-    def * = (id, sectionId, timestamp, begin, end, building, room, roomLink,
+    def * = (id, sectionId, begin, end, building, room, roomLink,
       (sunday, monday, tuesday, wednesday, thursday, friday, saturday) <> (WebSoc.Days.tupled, WebSoc.Days.unapply))
   }
 
   val meetings = TableQuery[Meeting]
 
-  class Final(tag: Tag) extends Table[(Int, Int, java.sql.Timestamp, Option[String], Option[String], Option[Int], Option[Int])](tag, "finals") {
+  class Final(tag: Tag) extends Table[(Int, Int, Option[String], Option[String], Option[Int], Option[Int])](tag, "finals") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def sectionId = column[Int]("section_id")
-    def timestamp = column[java.sql.Timestamp]("timestamp")
     def date = column[Option[String]]("date")
     def day = column[Option[String]]("day")
     def begin = column[Option[Int]]("begin")
     def end = column[Option[Int]]("end")
 
     def section = foreignKey("section_final_fk", sectionId, sections)(_.id)
-    def timestamps = foreignKey("section_timestamp_fk", timestamp, history)(_.timestamp)
 
-    def * = (id, sectionId, timestamp, date, day, begin, end)
+    def * = (id, sectionId, date, day, begin, end)
   }
 
   val finals = TableQuery[Final]
 
-  class Instructor(tag: Tag) extends Table[(Int, Int, java.sql.Timestamp, String)](tag, "instructors") {
+  class Instructor(tag: Tag) extends Table[(Int, Int, String)](tag, "instructors") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def sectionId = column[Int]("section_id")
-    def timestamp = column[java.sql.Timestamp]("timestamp")
     def name = column[String]("name")
 
     def section = foreignKey("section_instructor_fk", sectionId, sections)(_.id)
-    def timestamps = foreignKey("instructor_timestamp_fk", timestamp, history)(_.timestamp)
 
-    def * = (id, sectionId, timestamp, name)
+    def * = (id, sectionId, name)
   }
 
   val instructors = TableQuery[Instructor]
 
-  class Enrollment(tag: Tag) extends Table[(Int, Int, java.sql.Timestamp, WebSoc.Enrollment)](tag, "enrollments") {
+  class Enrollment(tag: Tag) extends Table[(Int, Int, WebSoc.Enrollment)](tag, "enrollments") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def sectionId = column[Int]("section_id")
-    def timestamp = column[java.sql.Timestamp]("timestamp")
     def max = column[Option[Int]]("max")
     def enrolled = column[Option[Int]]("enrolled")
     def req = column[Option[Int]]("req")
@@ -201,9 +192,8 @@ object Schema {
     def xlist = column[Option[Int]]("xlist")
 
     def section = foreignKey("section_enrollment_fk", sectionId, sections)(_.id)
-    def timestamps = foreignKey("enrollment_timestamp_fk", timestamp, history)(_.timestamp)
 
-    def * = (id, sectionId, timestamp,
+    def * = (id, sectionId,
       (max, enrolled, req, newOnly, waitList, waitCap, xlist) <> (WebSoc.Enrollment.tupled, WebSoc.Enrollment.unapply))
   }
 

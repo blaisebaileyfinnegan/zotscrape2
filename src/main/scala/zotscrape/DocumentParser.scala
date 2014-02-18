@@ -116,7 +116,7 @@ object DocumentParser extends Logging {
   def parseFinal(n: Node): Final = {
     val groups = n.child.groupBy(_.label).withDefaultValue(Seq.empty)
 
-    val date = groups("sec_final_date").headOption.map(_.text.trim)
+    val date = groups("sec_final_date").headOption.map(_.text.trim).filter(_ != "TBA")
     val day = groups("sec_final_day").headOption.map(_.text.trim)
     val time = groups("sec_final_time").headOption.flatMap(parseTime)
 

@@ -60,19 +60,19 @@ object Writer {
     try {
       Schema.restrictions += (restriction.code.get, restriction.definition)
     } catch {
-      case _ => ()
+      case _: Throwable => ()
     }
   }
 
-  def insertSectionRestriction(sectionId: Int, timestamp: java.sql.Timestamp)(code: String)(implicit session: Session) = {
+  def insertSectionRestriction(code: String)(sectionId: Int)(implicit session: Session) = {
     try {
-      Schema.sectionRestrictions += (sectionId, timestamp, code)
+      Schema.sectionRestrictions += (sectionId, code)
     } catch {
-      case _ => ()
+      case _: Throwable => ()
     }
   }
 
-  def insertMeeting(meeting: WebSoc.Meeting)(sectionId: Int, timestamp: java.sql.Timestamp)(implicit session: Session) = {
+  def insertMeeting(meeting: WebSoc.Meeting)(sectionId: Int)(implicit session: Session) = {
     val (b, e) = meeting.time.map {
       case (begin, end) => (Some(begin), Some(end))
     } getOrElse ((None, None))
@@ -81,25 +81,25 @@ object Writer {
       WebSoc.Days(sunday = false, monday = false, tuesday = false, wednesday = false, thursday = false, friday = false, saturday = false))
 
     (Schema.meetings returning Schema.meetings.map(_.id)) +=
-      (0, sectionId, timestamp, b, e, meeting.building, meeting.room, meeting.roomLink, days)
+      (0, sectionId, b, e, meeting.building, meeting.room, meeting.roomLink, days)
   }
 
-  def insertFinal(sectionFinal: WebSoc.Final)(sectionId: Int, timestamp: java.sql.Timestamp)(implicit session: Session) = {
+  def insertFinal(sectionFinal: WebSoc.Final)(sectionId: Int)(implicit session: Session) = {
     val (b, e) = sectionFinal.time.map {
       case (begin, end) => (Some(begin), Some(end))
     } getOrElse((None, None))
 
     (Schema.finals returning Schema.finals.map(_.id)) +=
-      (0, sectionId, timestamp, sectionFinal.date, sectionFinal.day, b, e)
+      (0, sectionId, sectionFinal.date, sectionFinal.day, b, e)
   }
 
-  def insertInstructor(instructor: String)(sectionId: Int, timestamp: java.sql.Timestamp)(implicit session: Session) = {
+  def insertInstructor(instructor: String)(sectionId: Int)(implicit session: Session) = {
     (Schema.instructors returning Schema.instructors.map(_.id)) +=
-      (0, sectionId, timestamp, instructor)
+      (0, sectionId, instructor)
   }
 
-  def insertEnrollment(enrollment: WebSoc.Enrollment)(sectionId: Int, timestamp: java.sql.Timestamp)(implicit session: Session) = {
+  def insertEnrollment(enrollment: WebSoc.Enrollment)(sectionId: Int)(implicit session: Session) = {
     (Schema.enrollments returning Schema.enrollments.map(_.id)) +=
-      (0, sectionId, timestamp, enrollment)
+      (0, sectionId, enrollment)
   }
 }

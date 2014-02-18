@@ -95,11 +95,15 @@ class WriterService(jdbcUrl: String, username: String, password: String, timesta
 
         sectionMap foreach {
           case (sectionId, section) =>
-            section.restrictions foreach (_.foreach { restriction => insertSectionRestriction(sectionId, timestamp)(restriction) })
-            section.meetings foreach { meeting => insertMeeting(meeting)(sectionId, timestamp) }
-            section.secFinal foreach { finale => insertFinal(finale)(sectionId, timestamp) }
-            section.instructors foreach { instructor => insertInstructor(instructor)(sectionId, timestamp) }
-            section.enrollment foreach { enrollment => insertEnrollment(enrollment)(sectionId, timestamp) }
+            section.restrictions foreach (_.foreach { restriction => insertSectionRestriction(restriction)(sectionId) })
+            section.meetings filter { m =>
+              !m.time.isEmpty &&
+              !m.building.isEmpty &&
+              !m.room.isEmpty
+            } foreach { meeting => insertMeeting(meeting)(sectionId) }
+            section.secFinal filter (!_.date.isEmpty) foreach { finale => insertFinal(finale)(sectionId) }
+            section.instructors foreach { instructor => insertInstructor(instructor)(sectionId) }
+            section.enrollment foreach { enrollment => insertEnrollment(enrollment)(sectionId) }
         }
 
         self ! DocumentDone(quarter, department, failed = false)
