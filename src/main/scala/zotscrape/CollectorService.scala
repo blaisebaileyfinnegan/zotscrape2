@@ -76,8 +76,7 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
 
       if (awaiting == 0) context.parent ! Done
     }
-    case x => {
-      log.error("Unhandled message in collector service: " + x)
-    }
+
+    case unrecognized => log.error("Unhandled message in collector service: " + unrecognized)
   }
 }

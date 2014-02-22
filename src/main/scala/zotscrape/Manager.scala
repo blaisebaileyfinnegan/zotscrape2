@@ -43,8 +43,7 @@ class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean, 
     case WriterService.Done => {
       writerServiceDone = true
       sender ! PoisonPill
-
-      context.system.shutdown()
+      self ! PoisonPill
     }
 
     case Start => {
@@ -88,7 +87,7 @@ class Manager(baseUrl: String, potentialQuarters: List[String], debug: Boolean, 
         }
         case _ => {
           log.error("Could not retrieve quarters and departments!")
-          context.system.shutdown()
+          self ! PoisonPill
         }
       }
     }

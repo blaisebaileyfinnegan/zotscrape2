@@ -4,7 +4,12 @@ version := "1.0"
 
 scalaVersion := "2.10.3"
 
-resolvers += "Twitter" at "http://maven.twttr.com"
+scalacOptions ++= Seq("-feature")
+
+resolvers ++= Seq(
+  "spray repo" at "http://repo.spray.io/",
+  "spray nightly repo" at "http://nightlies.spray.io/"
+)
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.2.1",
@@ -18,8 +23,9 @@ libraryDependencies ++= Seq(
   "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
   "com.typesafe.slick" %% "slick" % "2.0.0",
   "mysql" % "mysql-connector-java" % "5.1.29",
-  "com.twitter" %% "finatra" % "1.5.2"
+  "io.spray" % "spray-can" % "1.2.0",
+  "io.spray" % "spray-routing" % "1.2.0",
+  "io.spray" %%  "spray-json" % "1.2.5"
 )
 
 ScoverageSbtPlugin.instrumentSettings
-

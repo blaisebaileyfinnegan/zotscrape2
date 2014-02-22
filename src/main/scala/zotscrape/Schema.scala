@@ -2,11 +2,6 @@ package zotscrape
 
 import slick.driver.MySQLDriver.simple._
 
-/**
- * (Term)
- * (School) => (Department) => (Course)
- *
- */
 object Schema {
   class History(tag: Tag) extends Table[(java.sql.Timestamp)](tag, "history") {
     def timestamp = column[java.sql.Timestamp]("timestamp", O.PrimaryKey)

@@ -1,26 +1,32 @@
 package zotscrape
 
-import com.typesafe.config.{ConfigFactory, Config}
+import antbutter._
 import akka.actor.{Props, ActorSystem}
-import scala.collection.JavaConversions._
+import scala.concurrent.duration._
 
-object Main extends App {
-  ZotScrape(ConfigFactory.load("application.conf"))
+object Main extends App with ConfigProvider {
+  override val configService = new Config
+
+  ZotScrape.apply(configService)
 }
 
 object ZotScrape {
-  def apply(config: Config) {
-    val baseUrl = config.getString("baseUrl")
-    val potentialQuarters = config.getStringList("targetQuarters").toList
-    val debug = config.getBoolean("debug")
-    val jdbcUrl = config.getString("jdbcUrl")
-    val username = config.getString("username")
-    val password = config.getString("password")
+  def apply(config: Main.Config) {
+    val system = ActorSystem("zotscrape-solo")
+    scrape(config, system)
+  }
 
+  def scrape(config: Main.Config, system: ActorSystem) {
     val timestamp = new java.sql.Timestamp(new java.util.Date().getTime)
-    val system = ActorSystem("zotscrape-system")
     val conductor = system.actorOf(
-      Props(classOf[Manager], baseUrl, potentialQuarters, debug, jdbcUrl, username, password, timestamp),
+      Props(classOf[Manager],
+        config.baseUrl,
+        config.potentialQuarters,
+        config.debug,
+        config.jdbcUrl,
+        config.username,
+        config.password,
+        timestamp),
       "Manager"
     )
 
