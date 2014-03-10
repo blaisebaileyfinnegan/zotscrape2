@@ -1,0 +1,13 @@
+<div class="panel panel-primary">
+  <div class="panel-heading">
+    <h3 class="panel-title">Please choose a quarter:</h3>
+  </div>
+  <div class="panel-body">
+    <div class="list-group">
+      <a href="/#/{{ term.id }}" class="list-group-item" ng-repeat="term in terms">
+        <span class="glyphicon glyphicon-chevron-right"></span>
+        <span class="large-item">{{ term.name + ' ' + term.year }}</span>
+      </a>
+    </div>
+  </div>
+</div>

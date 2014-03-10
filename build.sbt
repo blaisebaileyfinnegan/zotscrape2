@@ -1,3 +1,6 @@
+import spray.revolver.RevolverPlugin._
+import SbtGruntPlugin._
+
 name := """zotscrape2"""
 
 version := "1.0"
@@ -10,6 +13,12 @@ resolvers ++= Seq(
   "spray repo" at "http://repo.spray.io/",
   "spray nightly repo" at "http://nightlies.spray.io/"
 )
+
+seq(Revolver.settings: _*)
+
+seq(SbtGruntPlugin.settings: _*)
+
+mainClass in Revolver.reStart := Some("antbutter.Boot")
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.2.1",
@@ -29,3 +38,5 @@ libraryDependencies ++= Seq(
 )
 
 ScoverageSbtPlugin.instrumentSettings
+
+

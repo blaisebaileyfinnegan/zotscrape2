@@ -1,0 +1,13 @@
+<div class="panel panel-primary">
+  <div class="panel-heading">
+    <h3 class="panel-title">Please choose a school:</h3>
+  </div>
+  <div class="panel-body">
+    <div class="list-group">
+      <a href="/#/{{ workflow.steps.term.id }}/{{ school.id }}" class="list-group-item" ng-repeat="school in schools">
+        <span class="glyphicon glyphicon-chevron-right"></span>
+        <span class="large-item">{{ school.name }}</span>
+      </a>
+    </div>
+  </div>
+</div>

@@ -8,9 +8,12 @@
 *-shim.sbt
 .idea/
 /project/plugins/project
-src/main/resources/public/components
+src/main/webapp/components
+src/main/resources/dist
+src/main/webapp/dist
 project/boot
 target/
+.sass-cache
 /logs
 .cache
 .classpath

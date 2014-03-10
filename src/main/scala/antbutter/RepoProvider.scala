@@ -38,6 +38,10 @@ trait RepoProvider { this: ConfigProvider =>
       Schema.courses.sortBy(_.title.desc).run
     }
 
+    def sectionsByCourse(id: Int) = db withDynSession {
+      Schema.sections.where(_.courseId === id).run
+    }
+
     def meetingsBySectionId(id: Int) = db withDynSession {
       Schema.meetings.where(_.sectionId === id).run
     }
@@ -69,30 +73,37 @@ trait RepoProvider { this: ConfigProvider =>
     }
 
     def sectionByCcode(ccode: Int, termId: Int)(timestamp: java.sql.Timestamp) = db withDynSession {
-      val read = Schema.sections where {
-        s => s.ccode === ccode && s.termId === termId && s.timestamp === timestamp
-      } innerJoin Schema.courses on {
-        (s, c) => s.courseId === c.id
-      } innerJoin Schema.departments on {
-        case ((s, c), d) => c.departmentId === d.id
-      } innerJoin Schema.schools on {
-        case (((s, c), d), school) => d.schoolId === school.id
-      }
+      Schema.sections.where { s =>
+        s.ccode === ccode && s.termId === termId && s.timestamp === timestamp
+      }.firstOption
+    }
 
-      read.firstOption map {
-        case (((section, course), department), school) => (section, course, department, school)
-      } map {
-        case (section, course, department, school) => {
-          val sectionId = section._1
-          val enrollment = Await.result(Future(enrollmentBySectionId(sectionId)), 3 seconds)
-          val instructors = Await.result(Future(instructorsBySectionId(sectionId)), 3 seconds)
-          val restrictions = Await.result(Future(restrictionsBySectionId(sectionId)), 3 seconds)
-          val fina = Await.result(Future(finalBySectionId(sectionId)), 3 seconds)
-          val meetings = Await.result(Future(meetingsBySectionId(sectionId)), 3 seconds)
+    def termByYyyyst(yyyyst: String) = db withDynSession {
+      Schema.terms.where(_.yyyyst === yyyyst).firstOption
+    }
 
-          (section, course, department, school, meetings, fina, instructors, enrollment, restrictions)
-        }
-      }
+    def schoolByCode(code: String) = db withDynSession {
+      Schema.schools.where(_.code === code).firstOption
+    }
+
+    def termById(id: Int) = db withDynSession {
+      Schema.terms.where(_.id === id).firstOption
+    }
+
+    def schoolById(id: Int) = db withDynSession {
+      Schema.schools.where(_.id === id).firstOption
+    }
+
+    def departmentById(id: Int) = db withDynSession {
+      Schema.departments.where(_.id === id).firstOption
+    }
+
+    def departmentsBySchoolId(id: Int) = db withDynSession {
+      Schema.departments.where(_.schoolId === id).sortBy(_.name.asc).run
+    }
+
+    def coursesByDepartmentId(id: Int) = db withDynSession {
+      Schema.courses.where(_.departmentId === id).sortBy(_.number.asc).run
     }
   }
 }
