@@ -1,24 +1,25 @@
 package zotscrape
 
 import akka.actor.{Props, ActorLogging, Actor}
-import akka.routing.SmallestMailboxRouter
+import akka.routing.{FromConfig, SmallestMailboxRouter}
 import scala.collection.mutable.ListBuffer
 
 
 object CollectorService {
-  case class Todo(quarter: String, department: String, retryCount: Int = 0)
   case object Done
+  case object Start
+
+  case class QueueScrapeTask(todo: Todo)
+
+  case class Todo(quarter: String, department: String, retryCount: Int = 0)
 }
 
 class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl: String, debug: Boolean)
   extends Actor with ActorLogging {
   import CollectorService._
-  import ScraperWorker._
-  import Manager._
 
-  val cpuCount = Runtime.getRuntime.availableProcessors()
-  val pageScraper = context.actorOf(Props(classOf[ScraperWorker], baseUrl, self)
-    .withRouter(SmallestMailboxRouter(cpuCount)), "PageScraperService")
+  val pageScraperRouter = context.actorOf(Props(classOf[ScraperWorker], baseUrl, self)
+    .withRouter(FromConfig()), "ScraperWorkerRouter")
 
   var awaiting = 0
   var totalParsingTime: Long = 0 // Excluding I/O
@@ -35,7 +36,7 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
   }
 
   def receive = {
-    case StartCollectorService => {
+    case Start => {
       val pairs = for {
         quarter <- quarters
         department <- departments
@@ -45,19 +46,19 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
       awaiting = left.size
       timeBegan = System.currentTimeMillis()
 
-      log.info("Starting " + cpuCount + " scrapers.")
       log.info("Pages to scrape: " + awaiting)
 
-      left foreach (todo => {
-        self ! StartScrapingPage(todo)
-      })
+      left foreach { todo =>
+        self ! QueueScrapeTask(todo)
+      }
     }
 
-    case StartScrapingPage(Todo(quarter, department, tryCount)) =>
-      if (tryCount < 3) pageScraper ! StartScrapingPage(Todo(quarter, department, tryCount + 1))
-      else self ! ScrapingFailed(Todo(quarter, department, tryCount))
+    case QueueScrapeTask(Todo(quarter, department, tryCount)) => {
+      if (tryCount < 3) pageScraperRouter ! ScraperWorker.ScrapePage(Todo(quarter, department, tryCount + 1))
+      else self ! ScraperWorker.ScrapingFailed(Todo(quarter, department, tryCount))
+    }
 
-    case ScrapingDone(quarter, department, websoc, time) => {
+    case ScraperWorker.ScrapingDone(quarter, department, websoc, time) => {
       totalParsingTime += time
       awaiting -= 1
 
@@ -68,7 +69,7 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
       if (awaiting == 0) context.parent ! Done
     }
 
-    case ScrapingFailed(Todo(quarter, department, retryCount)) => {
+    case ScraperWorker.ScrapingFailed(Todo(quarter, department, retryCount)) => {
       awaiting -= 1
       log.error(department + " failed after " + retryCount + " tries!")
 
@@ -76,7 +77,5 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
 
       if (awaiting == 0) context.parent ! Done
     }
-
-    case unrecognized => log.error("Unhandled message in collector service: " + unrecognized)
   }
 }

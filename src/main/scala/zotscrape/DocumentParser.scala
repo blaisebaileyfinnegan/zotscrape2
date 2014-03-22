@@ -1,11 +1,13 @@
 package zotscrape
 
-import com.typesafe.scalalogging.slf4j.Logging
 import scala.xml.{Elem, Node}
 import scala.Some
 import scala.concurrent.Future
-import WebSoc._
 import scala.concurrent.ExecutionContext.Implicits.global
+
+import com.typesafe.scalalogging.slf4j.Logging
+
+import WebSoc._
 
 object DocumentParser extends Logging {
 

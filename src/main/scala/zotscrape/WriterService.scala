@@ -9,17 +9,17 @@ import ExecutionContext.Implicits.global
 
 object WriterService {
   case object CreateSchema
-  case object WriteHistory
   case object Done
   case object Ready
+  case object Start
   case object TryShutdown
+  case object WriteHistory
 
-  case class WriteDocument(quarter: String, department: String, websoc: WebSoc)
   case class DocumentDone(quarter: String, department: String, failed: Boolean)
+  case class WriteDocument(quarter: String, department: String, websoc: WebSoc)
 }
 
 class WriterService(jdbcUrl: String, username: String, password: String, timestamp: java.sql.Timestamp) extends Actor with ActorLogging {
-  import Manager._
   import WriterService._
   import Writer._
 
@@ -65,7 +65,6 @@ class WriterService(jdbcUrl: String, username: String, password: String, timesta
 
     case WriteDocument(quarter, department, websoc) => session asDynamicSession Future {
       awaiting += 1
-      log.info("Saving " + department + " in " + quarter + ".")
 
       if (websoc.term.isEmpty) {
         self ! DocumentDone(quarter, department, failed = true)
@@ -113,15 +112,14 @@ class WriterService(jdbcUrl: String, username: String, password: String, timesta
     case DocumentDone(quarter, department, failed) =>
       awaiting -= 1
 
-      if (failed)
+      if (failed) {
         log.error(department + " in " + quarter + " failed.")
-      else
-        log.info(department + " in " + quarter + " saved.")
+      }
 
       self ! TryShutdown
 
 
-    case StartWriterService => session asDynamicSession {
+    case Start => session asDynamicSession {
       if (MTable.getTables("history").list().isEmpty) self ! CreateSchema
       else self ! WriteHistory
     }

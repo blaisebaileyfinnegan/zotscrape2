@@ -7,13 +7,16 @@ trait ConfigProvider {
   val configService: Config
 
   class Config {
-    lazy val config = ConfigFactory.load("application.conf")
+    lazy val config = ConfigFactory.load("application.json")
 
-    lazy val jdbcUrl = config.getString("jdbcUrl")
-    lazy val username = config.getString("username")
-    lazy val password = config.getString("password")
-    lazy val baseUrl = config.getString("baseUrl")
-    lazy val potentialQuarters = config.getStringList("targetQuarters").toList
-    lazy val debug = config.getBoolean("debug")
+    lazy val jdbcUrl = config.getString("jdbc.url")
+    lazy val username = config.getString("jdbc.username")
+    lazy val password = config.getString("jdbc.password")
+
+    lazy val baseUrl = config.getString("scraper.baseUrl")
+    lazy val potentialQuarters = config.getStringList("scraper.targetQuarters").toList
+    lazy val debug = config.getBoolean("scraper.debug")
+    lazy val initialDelay = config.getLong("scraper.initialDelay")
+    lazy val frequency = config.getLong("scraper.frequency")
   }
 }

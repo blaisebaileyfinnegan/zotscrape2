@@ -1,19 +1,18 @@
 package zotscrape
 
-import akka.actor.{ActorRef, Props, ActorLogging, Actor}
-import CollectorService._
+import akka.actor.{ActorRef, ActorLogging, Actor}
+
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scalaj.http.{HttpOptions, HttpException, Http}
-import akka.pattern.pipe
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object ScraperWorker {
-  case class StartScrapingPage(todo: Todo)
-  case class ScrapingFailed(todo: Todo)
-  case class ScrapingDone(quarter: String, department: String, websoc: WebSoc, time: Long)
+import CollectorService._
 
-  var times = 0
+object ScraperWorker {
+  case class ScrapePage(todo: Todo)
+  case class ScrapingDone(quarter: String, department: String, websoc: WebSoc, time: Long)
+  case class ScrapingFailed(todo: Todo)
 }
 
 class ScraperWorker(baseUrl: String, collectorService: ActorRef) extends Actor with ActorLogging {
@@ -42,39 +41,30 @@ class ScraperWorker(baseUrl: String, collectorService: ActorRef) extends Actor w
       .asXml
   }
 
-  override def postStop() =
-    log.info("Shutting down scraper.")
+  override def postStop() = log.info("Shutting down scraper.")
 
   def receive = {
-    case StartScrapingPage(Todo(quarter, department, tryCount)) => {
-      val message = "Retrieving " + department + " in " + quarter + "."
-      if (tryCount > 1) {
-        log.warning("Retry #" + tryCount + ": " + message)
-      } else {
-        log.info(message)
-      }
-
+    case ScrapePage(Todo(quarter, department, tryCount)) => {
       val document = getDocument(quarter, department)
 
       def retry() = {
-        collectorService ! StartScrapingPage(Todo(quarter, department, tryCount))
+        collectorService ! CollectorService.QueueScrapeTask(Todo(quarter, department, tryCount))
       }
 
       var beginTime: Long = 0
-      document.flatMap(x => {
+      document flatMap { x =>
         beginTime = System.currentTimeMillis()
-        log.info("Started parsing " + department + " in " + quarter + ".")
         DocumentParser(x)
-      }) onComplete {
+      } onComplete {
         case Success(websoc) =>
           collectorService ! ScrapingDone(quarter, department, websoc, System.currentTimeMillis() - beginTime)
         case Failure(x) => x match {
           case _: java.net.SocketTimeoutException => retry()
           case _: HttpException => retry()
-          case unrecognized => collectorService ! unrecognized
+          case _: java.lang.NumberFormatException =>
+            collectorService ! ScrapingFailed(Todo(quarter, department, tryCount))
         }
       }
     }
-    case unrecognized => log.error("Unrecognized message sent to scraper service: " + unrecognized)
   }
 }

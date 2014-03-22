@@ -21,7 +21,7 @@ seq(SbtGruntPlugin.settings: _*)
 mainClass in Revolver.reStart := Some("antbutter.Boot")
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor" % "2.2.1",
+  "com.typesafe.akka" %% "akka-actor" % "2.2.4",
   "com.typesafe.akka" %% "akka-testkit" % "2.2.1",
   "com.typesafe.akka" %% "akka-remote" % "2.2.3",
   "org.scalatest" % "scalatest_2.10" % "2.0" % "test",

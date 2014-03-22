@@ -1,0 +1,24 @@
+{
+  "jdbc": {
+    "url": "jdbc:mysql://localhost/zotscrape2",
+    "username": "root",
+    "password": ""
+  },
+  "scraper": {
+    "initialDelay": 5000,
+    "frequency": 300000,
+    "baseUrl": "http://websoc.reg.uci.edu/perl/WebSoc",
+    "targetQuarters": ["2014-14", "2014-25", "2014-39", "2014-76"],
+    "debug": false
+  },
+  "akka": {
+    "actor": {
+      "deployment": {
+        "/Manager/CollectorService/ScraperWorkerRouter": {
+          "router": "round-robin",
+          "nr-of-instances": 12
+        }
+      }
+    }
+  }
+}

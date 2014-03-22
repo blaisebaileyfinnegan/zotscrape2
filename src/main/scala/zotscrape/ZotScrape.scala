@@ -3,6 +3,7 @@ package zotscrape
 import antbutter._
 import akka.actor.{Props, ActorSystem}
 import scala.concurrent.duration._
+import com.typesafe.config.Config
 
 object Main extends App with ConfigProvider {
   override val configService = new Config
@@ -16,7 +17,7 @@ object ZotScrape {
     scrape(config, system)
   }
 
-  def scrape(config: Main.Config, system: ActorSystem) {
+  def scrape(config: ConfigProvider#Config, system: ActorSystem) {
     val timestamp = new java.sql.Timestamp(new java.util.Date().getTime)
     val conductor = system.actorOf(
       Props(classOf[Manager],
