@@ -1,6 +1,7 @@
 package antbutter
 
-import zotscrape.Schema._
+import zotscrape.Writer.Schema
+import Schema._
 import spray.json._
 import zotscrape.WebSoc.Days
 

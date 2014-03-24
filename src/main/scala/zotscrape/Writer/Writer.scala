@@ -1,6 +1,7 @@
-package zotscrape
+package zotscrape.Writer
 
 import slick.driver.MySQLDriver.simple._
+import zotscrape.WebSoc
 
 object Writer {
   class TermExistsException extends Exception

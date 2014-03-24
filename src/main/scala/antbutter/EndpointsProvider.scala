@@ -1,16 +1,18 @@
 package antbutter
 
-import spray.routing.{RoutingSettings, ExceptionHandler, HttpService}
 import akka.actor.{Actor, ActorRefFactory}
-import spray.json._
 import java.sql.Timestamp
+import spray.routing.{RoutingSettings, ExceptionHandler, HttpService}
+import spray.json._
 import spray.http.StatusCodes
+
+import zotscrape.Manager
 
 object EndpointsProvider extends ConfigProvider with RepoProvider with BigPayloads {
   override val repoService: EndpointsProvider.Repo = new Repo
   override val configService: EndpointsProvider.Config = new Config
 
-  lazy val maxTimestamp: Timestamp = repoService.maxTimestamp.getOrElse(throw new Error())
+  var maxTimestamp: Timestamp = repoService.maxTimestamp.getOrElse(throw new Error)
 
   class EndpointsActor extends Actor with Endpoints {
     override implicit def actorRefFactory: ActorRefFactory = context
@@ -21,7 +23,10 @@ object EndpointsProvider extends ConfigProvider with RepoProvider with BigPayloa
       }
     }
 
-    override def receive: Actor.Receive = runRoute(routes)
+    override def receive = {
+      case Manager.Done => maxTimestamp = repoService.maxTimestamp.getOrElse(throw new Error)
+      case _ => runRoute(routes)
+    }
   }
 
   trait Endpoints extends HttpService {

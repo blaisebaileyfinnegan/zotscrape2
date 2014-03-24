@@ -1,7 +1,5 @@
 package zotscrape
 
-import java.io.IOException
-
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -11,8 +9,13 @@ import akka.actor._
 import org.jsoup.Jsoup
 import org.jsoup.nodes.{Element, Document}
 import scalaj.http.{HttpOptions, Http}
+import zotscrape.Collector.CollectorService
+import zotscrape.Writer.WriterService
+import zotscrape.Catalogue.CatalogueService
+import com.typesafe.config.ConfigObject
 
 object Manager {
+  case object Done
   case object Start
 
   case object Shutdown
@@ -24,21 +27,30 @@ class Manager(baseUrl: String,
               jdbcUrl: String,
               username: String,
               password: String,
-              timestamp: java.sql.Timestamp) extends Actor with ActorLogging {
-  import Manager._
+              disableCatalogue: Boolean,
+              catalogueUrl: String,
+              params: ConfigObject,
+              timestamp: java.sql.Timestamp,
+              consumer: Option[ActorRef]) extends Actor with ActorLogging {
 
   var collectorServiceDone = false
-  var writerServiceDone = false
 
   val writerService = context.actorOf(
     Props(classOf[WriterService], jdbcUrl, username, password, timestamp),
-    "WriterService"
-  )
+    "WriterService")
+
+  val catalogueService = context.actorOf(
+    Props(classOf[CatalogueService], disableCatalogue, catalogueUrl, params, writerService),
+    "CatalogueService")
+
+  val collectorService = context.actorOf(
+    Props(classOf[CollectorService], baseUrl, debug, catalogueService),
+    "CollectorService")
 
   def receive = {
-    case Manager.Start => writerService ! WriterService.Start
-
-    case x: WriterService.WriteDocument => writerService ! x
+    case Manager.Start => {
+      writerService ! WriterService.Start
+    }
 
     case WriterService.Ready => {
       def getDropdownValues(document: Document, predicate: (Element) => Boolean): List[String] = {
@@ -66,12 +78,8 @@ class Manager(baseUrl: String,
             if (potentialQuarters.isEmpty) List(quarters.head)
             else potentialQuarters
 
-          val collectorService = context.actorOf(
-            Props(classOf[CollectorService], targetQuarters, departments, baseUrl, debug),
-            "CollectorService"
-          )
 
-          collectorService ! CollectorService.Start
+          collectorService ! CollectorService.Start(targetQuarters, departments)
         }
 
         case _ => {
@@ -79,20 +87,6 @@ class Manager(baseUrl: String,
           self ! PoisonPill
         }
       }
-    }
-
-    case CollectorService.Done => {
-      collectorServiceDone = true
-      sender ! PoisonPill
-
-      writerService ! CollectorService.Done
-    }
-
-    case WriterService.Done => {
-      writerServiceDone = true
-      log.info("All done!")
-
-      self ! PoisonPill
     }
   }
 

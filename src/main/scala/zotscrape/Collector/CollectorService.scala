@@ -1,20 +1,21 @@
-package zotscrape
+package zotscrape.Collector
 
-import akka.actor.{Props, ActorLogging, Actor}
-import akka.routing.{FromConfig, SmallestMailboxRouter}
+import akka.actor._
+import akka.routing.FromConfig
 import scala.collection.mutable.ListBuffer
+import zotscrape.WebSoc
+import zotscrape.Catalogue.CatalogueService
 
 
 object CollectorService {
   case object Done
-  case object Start
-
   case class QueueScrapeTask(todo: Todo)
-
+  case class Start(targetQuarters: Seq[String], departments: Seq[String])
   case class Todo(quarter: String, department: String, retryCount: Int = 0)
+  case class Document(quarter: String, department: String, websoc: WebSoc)
 }
 
-class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl: String, debug: Boolean)
+class CollectorService(baseUrl: String, debug: Boolean, catalogueService: ActorRef)
   extends Actor with ActorLogging {
   import CollectorService._
 
@@ -36,7 +37,7 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
   }
 
   def receive = {
-    case Start => {
+    case Start(quarters, departments) => {
       val pairs = for {
         quarter <- quarters
         department <- departments
@@ -64,9 +65,12 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
 
       log.info(awaiting + " left.")
 
-      context.parent ! WriterService.WriteDocument(quarter, department, websoc)
+      catalogueService ! Document(quarter, department, websoc)
 
-      if (awaiting == 0) context.parent ! Done
+      if (awaiting == 0) {
+        catalogueService ! Done
+        self ! PoisonPill
+      }
     }
 
     case ScraperWorker.ScrapingFailed(Todo(quarter, department, retryCount)) => {
@@ -75,7 +79,10 @@ class CollectorService(quarters: Seq[String], departments: Seq[String], baseUrl:
 
       failedPages += department
 
-      if (awaiting == 0) context.parent ! Done
+      if (awaiting == 0) {
+        catalogueService ! Done
+        self ! PoisonPill
+      }
     }
   }
 }

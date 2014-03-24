@@ -1,4 +1,4 @@
-package zotscrape
+package zotscrape.Writer
 
 import akka.actor._
 import scala.slick.driver.MySQLDriver
@@ -6,6 +6,9 @@ import scala.slick.driver.MySQLDriver.simple._
 import scala.slick.jdbc.meta.MTable
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import zotscrape.Collector.CollectorService
+import zotscrape.WebSoc
+import zotscrape.Catalogue.{CatalogueService, CatalogueInfo}
 
 object WriterService {
   case object CreateSchema
@@ -16,26 +19,38 @@ object WriterService {
   case object WriteHistory
 
   case class DocumentDone(quarter: String, department: String, failed: Boolean)
-  case class WriteDocument(quarter: String, department: String, websoc: WebSoc)
 }
 
-class WriterService(jdbcUrl: String, username: String, password: String, timestamp: java.sql.Timestamp) extends Actor with ActorLogging {
-  import WriterService._
+class WriterService(jdbcUrl: String,
+                    username: String,
+                    password: String,
+                    timestamp: java.sql.Timestamp) extends Actor with ActorLogging {
   import Writer._
 
   var awaiting: Long = 0
-  var collectorDone: Boolean = false
+  var pendingCatalogueInfos: List[CatalogueInfo] = Nil
+  var catalogueServiceDone: Boolean = false
+
   implicit val session: MySQLDriver.backend.Session =
     MySQLDriver.simple.Database.forURL(jdbcUrl, username, password).createSession()
 
   def receive = {
-    case TryShutdown => if (awaiting == 0 && collectorDone) context.parent ! Done
+    case WriterService.TryShutdown => {
+      if (awaiting == 0 && catalogueServiceDone && pendingCatalogueInfos.isEmpty) {
+        context.parent ! WriterService.Done
+      }
+    }
 
-    case CollectorService.Done =>
-      collectorDone = true
-      self ! TryShutdown
+    case CatalogueService.Done => {
+      catalogueServiceDone = true
+      self ! WriterService.TryShutdown
+    }
 
-    case CreateSchema => session asDynamicSession {
+    case CatalogueInfo(name, description) => {
+      log.info("Received " + CatalogueInfo(name, description))
+    }
+
+    case WriterService.CreateSchema => session asDynamicSession {
       (Schema.history.ddl ++
         Schema.terms.ddl ++
         Schema.schools.ddl ++
@@ -49,25 +64,25 @@ class WriterService(jdbcUrl: String, username: String, password: String, timesta
         Schema.instructors.ddl ++
         Schema.enrollments.ddl).create
 
-      self ! WriteHistory
+      self ! WriterService.WriteHistory
     }
 
-    case WriteHistory => session asDynamicSession {
+    case WriterService.WriteHistory => session asDynamicSession {
       if (Schema.history.where(_.timestamp === timestamp).exists.run) {
         throw new Error("Timestamp " + timestamp + " already found in database. Cannot insert.")
       } else {
         log.info("Writing " + timestamp + " to history.")
         insertHistory(timestamp)
 
-        context.parent ! Ready
+        context.parent ! WriterService.Ready
       }
     }
 
-    case WriteDocument(quarter, department, websoc) => session asDynamicSession Future {
+    case CollectorService.Document(quarter, department, websoc) => session asDynamicSession Future {
       awaiting += 1
 
       if (websoc.term.isEmpty) {
-        self ! DocumentDone(quarter, department, failed = true)
+        self ! WriterService.DocumentDone(quarter, department, failed = true)
       } else {
         val termId = Writer.insertIgnoreTerm(websoc.term.get)
         websoc.codes.getOrElse(Seq.empty).foreach(insertIgnoreRestriction)
@@ -105,26 +120,25 @@ class WriterService(jdbcUrl: String, username: String, password: String, timesta
             section.enrollment foreach { enrollment => insertEnrollment(enrollment)(sectionId) }
         }
 
-        self ! DocumentDone(quarter, department, failed = false)
+        self ! WriterService.DocumentDone(quarter, department, failed = false)
       }
     }
 
-    case DocumentDone(quarter, department, failed) =>
+    case WriterService.DocumentDone(quarter, department, failed) => {
       awaiting -= 1
 
       if (failed) {
         log.error(department + " in " + quarter + " failed.")
       }
-
-      self ! TryShutdown
-
-
-    case Start => session asDynamicSession {
-      if (MTable.getTables("history").list().isEmpty) self ! CreateSchema
-      else self ! WriteHistory
     }
 
+    case WriterService.Start => session asDynamicSession {
+      if (MTable.getTables("history").list().isEmpty) {
+        self ! WriterService.CreateSchema
+      } else {
+        self ! WriterService.WriteHistory
+      }
+    }
 
-    case unrecognized => log.error("Unexpected message " + unrecognized + " sent to writer service.")
   }
 }

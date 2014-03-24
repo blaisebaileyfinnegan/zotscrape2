@@ -15,7 +15,8 @@ object Boot extends App with ConfigProvider {
 
   IO(Http)(system) ! Http.Bind(service, "localhost", port = 7070)
 
-  system.scheduler.schedule(configService.initialDelay milliseconds, configService.frequency milliseconds) {
-    ZotScrape.scrape(configService, system)
+  system.scheduler.schedule(configService.Scraper.initialDelay.milliseconds,
+    configService.Scraper.frequency.milliseconds) {
+    ZotScrape.scrape(configService, system, Some(service))
   }
 }

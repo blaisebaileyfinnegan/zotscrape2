@@ -2,6 +2,7 @@ package zotscrape
 
 import org.scalatest._
 import scala.concurrent.ExecutionContext.Implicits.global
+import zotscrape.Collector.DocumentParser
 
 class DocumentParserSpec extends FlatSpec with Matchers {
   import DocumentParser._

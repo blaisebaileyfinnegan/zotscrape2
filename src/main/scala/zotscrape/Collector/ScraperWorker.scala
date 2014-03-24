@@ -1,5 +1,4 @@
-package zotscrape
-
+package zotscrape.Collector
 import akka.actor.{ActorRef, ActorLogging, Actor}
 
 import scala.concurrent.Future
@@ -8,6 +7,7 @@ import scalaj.http.{HttpOptions, HttpException, Http}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import CollectorService._
+import zotscrape.WebSoc
 
 object ScraperWorker {
   case class ScrapePage(todo: Todo)

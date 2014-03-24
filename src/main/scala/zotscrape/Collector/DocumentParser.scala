@@ -1,13 +1,27 @@
-package zotscrape
+package zotscrape.Collector
 
 import scala.xml.{Elem, Node}
-import scala.Some
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.language.implicitConversions
 
 import com.typesafe.scalalogging.slf4j.Logging
 
-import WebSoc._
+import zotscrape.WebSoc._
+import zotscrape.WebSoc.CourseList
+import scala.Some
+import zotscrape.WebSoc.Section
+import zotscrape.WebSoc.Final
+import zotscrape.WebSoc.Meeting
+import zotscrape.WebSoc.Term
+import zotscrape.WebSoc.Restriction
+import zotscrape.WebSoc.Metadata
+import zotscrape.WebSoc.Days
+import zotscrape.WebSoc.Course
+import zotscrape.WebSoc.Department
+import zotscrape.WebSoc.School
+import zotscrape.WebSoc.Enrollment
+import zotscrape.WebSoc
 
 object DocumentParser extends Logging {
 

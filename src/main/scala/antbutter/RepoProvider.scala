@@ -1,18 +1,18 @@
 package antbutter
 
 import slick.driver.MySQLDriver.simple._
-import zotscrape.Schema
 import Database.dynamicSession
 import scala.concurrent.{BlockContext, Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import zotscrape.Writer.Schema
 
 trait RepoProvider { this: ConfigProvider =>
 
   val repoService: Repo
 
   class Repo {
-    lazy val db = Database.forURL(configService.jdbcUrl, configService.username, configService.password)
+    lazy val db = Database.forURL(configService.Jdbc.url, configService.Jdbc.username, configService.Jdbc.password)
 
     def maxTimestamp = db withDynSession {
       Schema.history.map(_.timestamp).max.run
