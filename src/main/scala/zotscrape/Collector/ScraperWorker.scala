@@ -1,13 +1,12 @@
-package zotscrape.Collector
-import akka.actor.{ActorRef, ActorLogging, Actor}
+package zotscrape.collector
+import akka.actor.{Actor, ActorLogging, ActorRef}
+import zotscrape.collector.CollectorService._
+import zotscrape.WebSoc
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
-import scalaj.http.{HttpOptions, HttpException, Http}
-import scala.concurrent.ExecutionContext.Implicits.global
-
-import CollectorService._
-import zotscrape.WebSoc
+import scalaj.http.{Http, HttpException, HttpOptions}
 
 object ScraperWorker {
   case class ScrapePage(todo: Todo)
@@ -16,7 +15,7 @@ object ScraperWorker {
 }
 
 class ScraperWorker(baseUrl: String, collectorService: ActorRef) extends Actor with ActorLogging {
-  import ScraperWorker._
+  import zotscrape.collector.ScraperWorker._
 
   def getDocument(quarter: String, department: String): Future[xml.Elem] = Future {
     Http(baseUrl).options(HttpOptions.connTimeout(2000))

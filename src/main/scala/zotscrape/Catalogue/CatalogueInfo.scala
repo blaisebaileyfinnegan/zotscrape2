@@ -1,3 +1,3 @@
-package zotscrape.Catalogue
+package zotscrape.catalogue
 
 case class CatalogueInfo(name: String, description: String)

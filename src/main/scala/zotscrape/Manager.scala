@@ -1,18 +1,18 @@
 package zotscrape
 
+import akka.actor._
+import com.typesafe.config.ConfigObject
+import org.jsoup.Jsoup
+import org.jsoup.nodes.{Document, Element}
+import zotscrape.catalogue.CatalogueService
+import zotscrape.collector.CollectorService
+import zotscrape.writer.WriterService
+
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Success
-
-import akka.actor._
-import org.jsoup.Jsoup
-import org.jsoup.nodes.{Element, Document}
-import scalaj.http.{HttpOptions, Http}
-import zotscrape.Collector.CollectorService
-import zotscrape.Writer.WriterService
-import zotscrape.Catalogue.CatalogueService
-import com.typesafe.config.ConfigObject
+import scalaj.http.{Http, HttpOptions}
 
 object Manager {
   case object Done
@@ -27,8 +27,8 @@ class Manager(baseUrl: String,
               jdbcUrl: String,
               username: String,
               password: String,
-              disableCatalogue: Boolean,
               catalogueUrl: String,
+              catalogueEnabled: Boolean,
               params: ConfigObject,
               timestamp: java.sql.Timestamp,
               consumer: Option[ActorRef]) extends Actor with ActorLogging {
@@ -39,17 +39,26 @@ class Manager(baseUrl: String,
     Props(classOf[WriterService], jdbcUrl, username, password, timestamp),
     "WriterService")
 
-  val catalogueService = context.actorOf(
-    Props(classOf[CatalogueService], disableCatalogue, catalogueUrl, params, writerService),
-    "CatalogueService")
+  val catalogueService: Option[ActorRef] = if (catalogueEnabled) {
+    Some(context.actorOf(
+      Props(classOf[CatalogueService], catalogueUrl, params, writerService),
+      "CatalogueService"))
+  } else {
+    None
+  }
 
   val collectorService = context.actorOf(
-    Props(classOf[CollectorService], baseUrl, debug, catalogueService),
+    Props(classOf[CollectorService], baseUrl, debug, catalogueService.getOrElse(writerService)),
     "CollectorService")
 
   def receive = {
     case Manager.Start => {
       writerService ! WriterService.Start
+    }
+
+    case WriterService.Done => {
+      log.info("Shutting down manager.")
+      self ! PoisonPill
     }
 
     case WriterService.Ready => {

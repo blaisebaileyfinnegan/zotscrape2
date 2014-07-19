@@ -1,0 +1,36 @@
+.application {
+  width: 1000px;
+  margin: 0 auto;
+}
+
+.selected {
+  background: #ddd;
+}
+
+div.sidebar {
+  float: left;
+  width: 200px;
+}
+
+div.main {
+  float: right;
+  width: 780px;
+}
+
+div.school > div {
+  display: inline-block;
+  margin: 10px 5px;
+}
+
+div.school .id {
+  width: 10%;
+  display: none;
+}
+
+div.school .code {
+  width: 10%;
+}
+
+div.school .name {
+  width: 50%;
+}

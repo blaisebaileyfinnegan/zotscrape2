@@ -1,12 +1,13 @@
 package zotscrape
 
 import org.scalatest._
+import zotscrape.collector.DocumentParser
+
 import scala.concurrent.ExecutionContext.Implicits.global
-import zotscrape.Collector.DocumentParser
 
 class DocumentParserSpec extends FlatSpec with Matchers {
-  import DocumentParser._
-  import WebSoc._
+  import zotscrape.collector.DocumentParser._
+  import zotscrape.WebSoc._
 
   "Parsing a school tag with no departments" should "return a school" in {
     val node = <school school_code="60" school_name="School of Humanities"></school>

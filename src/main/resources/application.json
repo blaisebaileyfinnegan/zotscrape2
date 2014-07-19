@@ -8,24 +8,21 @@
     "initialDelay": 5000,
     "frequency": 300000,
     "baseUrl": "http://websoc.reg.uci.edu/perl/WebSoc",
-    "targetQuarters": ["2014-14", "2014-25", "2014-39", "2014-76"],
+    "targetQuarters": ["2014-92"],
     "debug": false,
     "catalogue": {
       "url": "http://catalogue.uci.edu/ribbit/index.cgi",
-      "disable": false,
+      "enabled": false,
       "params": {
         "page": "getcourse.rjs"
       }
     }
   },
   "akka": {
+    "log-dead-letters": 10,
     "actor": {
       "deployment": {
         "/Manager/CollectorService/ScraperWorkerRouter": {
-          "router": "round-robin",
-          "nr-of-instances": 4
-        },
-        "/Manager/CatalogueService/CatalogueRouter": {
           "router": "round-robin",
           "nr-of-instances": 4
         }

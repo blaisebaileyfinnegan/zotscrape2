@@ -1,7 +1,10 @@
-package zotscrape.Writer
+package zotscrape.writer
 
-import slick.driver.MySQLDriver.simple._
+import web.Transport
 import zotscrape.WebSoc
+
+import scala.slick.driver.MySQLDriver
+import scala.slick.driver.MySQLDriver.simple._
 
 object Writer {
   class TermExistsException extends Exception
@@ -11,65 +14,62 @@ object Writer {
   }
 
   def insertIgnoreTerm(term: WebSoc.Term)(implicit session: Session) = {
-    val result = Schema.terms.where(_.yyyyst === term.yyyyst.get).run.headOption map {
-      case (id, _, _, _, _) => id
+    Schema.terms.filter(t => t.yyyyst === term.yyyyst).map(_.id).firstOption getOrElse {
+      Schema.terms.map(t => (t.id, t.yyyyst, t.year, t.quarterName, t.termStatusMsg))
+        .returning(Schema.terms.map(_.id))
+        .insert((0, term.yyyyst.get, term.year.get, term.quarterName.get, term.termStatusMsg.get))
     }
-
-    result.getOrElse((Schema.terms returning Schema.terms.map(_.id)) +=
-      (0, term.yyyyst.get, term.year.get, term.quarterName.get, term.termStatusMsg.get))
   }
 
   def insertIgnoreSchool(school: WebSoc.School)(implicit session: Session) = {
-    val result = Schema.schools.where {
-      q => q.code === school.code.get && q.name === school.name.get
-    }.run.headOption map {
-      case (id, _, _) => id
+    Schema.schools
+      .filter(s => s.code === school.code && s.name === school.name)
+      .map(_.id).firstOption getOrElse {
+      Schema.schools.map(s => (s.id, s.code, s.name))
+        .returning(Schema.schools.map(_.id))
+        .insert((0, school.code.get, school.name.get))
     }
-
-    result.getOrElse((Schema.schools returning Schema.schools.map(_.id)) +=
-      (0, school.code.get, school.name.get))
   }
 
   def insertIgnoreDepartment(department: WebSoc.Department)(schoolId: Int)(implicit session: Session) = {
-    val result = Schema.departments.where {
-      q => q.schoolId === schoolId && q.code === department.code.get && q.name === department.name.get
-    }.run.headOption map {
-      case (id, _, _, _) => id
+    Schema.departments
+      .filter(d => d.schoolId === schoolId && d.code === department.code && d.name === department.name)
+      .map(_.id).firstOption getOrElse {
+      Schema.departments.map(d => (d.id, d.schoolId, d.code, d.name))
+        .returning(Schema.departments.map(_.id))
+        .insert((0, schoolId, department.code.get, department.name.get))
     }
-
-    result.getOrElse((Schema.departments returning Schema.departments.map(_.id)) +=
-      (0, schoolId, department.code.get, department.name.get))
   }
 
   def insertIgnoreCourse(course: WebSoc.Course)(departmentId: Int)(implicit session: Session) = {
-    val result = Schema.courses.where {
-      q => q.departmentId === departmentId && q.number === course.number.get && q.title === course.title.get
-    }.run.headOption map {
-      case (id, _, _, _, _) => id
+    Schema.courses
+      .filter(c => c.departmentId === departmentId && c.number === course.number && c.title === course.title)
+      .map(_.id).firstOption getOrElse {
+      Schema.courses.map(c => (c.id, c.departmentId, c.number, c.title, c.prereqLink))
+        .returning(Schema.courses.map(_.id))
+        .insert((0, departmentId, course.number.get, course.title.get, course.prereqLinks.headOption.getOrElse("")))
     }
-
-    result.getOrElse((Schema.courses returning Schema.courses.map(_.id)) +=
-      (0, departmentId, course.number.get, course.title.get, course.prereqLinks.headOption.getOrElse("")))
   }
 
   def insertSection(section: WebSoc.Section)(courseId: Int, termId: Int, timestamp: java.sql.Timestamp)(implicit session: Session) = {
-    (Schema.sections returning Schema.sections.map(_.id)) +=
-      (0, courseId, termId, timestamp, section.ccode.get, section.typ, section.num, section.units, section.booksLink, section.graded, section.status)
+    Schema.sections.map(s => (s.id, s.courseId, s.termId, s.timestamp, s.ccode, s.typ, s.num, s.units, s.booksLink, s.graded, s.status))
+      .returning(Schema.sections.map(_.id))
+      .insert((0, courseId, termId, timestamp, section.ccode.get, section.typ, section.num, section.units, section.booksLink, section.graded, section.status))
   }
 
   def insertIgnoreRestriction(restriction: WebSoc.Restriction)(implicit session: Session) = {
     try {
-      Schema.restrictions += (restriction.code.get, restriction.definition)
+      Schema.restrictions += Transport.Restriction(restriction.code.get, restriction.definition)
     } catch {
-      case _: Throwable => ()
+      case _: Exception => ()
     }
   }
 
   def insertSectionRestriction(code: String)(sectionId: Int)(implicit session: Session) = {
     try {
-      Schema.sectionRestrictions += (sectionId, code)
+      Schema.sectionRestrictions += Transport.SectionRestriction(sectionId, code)
     } catch {
-      case _: Throwable => ()
+      case _: Exception => ()
     }
   }
 
@@ -82,7 +82,7 @@ object Writer {
       WebSoc.Days(sunday = false, monday = false, tuesday = false, wednesday = false, thursday = false, friday = false, saturday = false))
 
     (Schema.meetings returning Schema.meetings.map(_.id)) +=
-      (0, sectionId, b, e, meeting.building, meeting.room, meeting.roomLink, days)
+      Transport.Meeting(0, sectionId, b, e, meeting.building, meeting.room, meeting.roomLink, days)
   }
 
   def insertFinal(sectionFinal: WebSoc.Final)(sectionId: Int)(implicit session: Session) = {
@@ -91,16 +91,16 @@ object Writer {
     } getOrElse((None, None))
 
     (Schema.finals returning Schema.finals.map(_.id)) +=
-      (0, sectionId, sectionFinal.date, sectionFinal.day, b, e)
+      Transport.Final(0, sectionId, sectionFinal.date, sectionFinal.day, b, e)
   }
 
   def insertInstructor(instructor: String)(sectionId: Int)(implicit session: Session) = {
     (Schema.instructors returning Schema.instructors.map(_.id)) +=
-      (0, sectionId, instructor)
+      Transport.Instructor(0, sectionId, instructor)
   }
 
   def insertEnrollment(enrollment: WebSoc.Enrollment)(sectionId: Int)(implicit session: Session) = {
     (Schema.enrollments returning Schema.enrollments.map(_.id)) +=
-      (0, sectionId, enrollment)
+      Transport.Enrollment(0, sectionId, enrollment)
   }
 }

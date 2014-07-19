@@ -1,6 +1,6 @@
 package zotscrape
 
-import WebSoc._
+import zotscrape.WebSoc._
 
 object WebSoc {
   type Interval = (Int, Int)

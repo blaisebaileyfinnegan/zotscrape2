@@ -1,10 +1,10 @@
-package zotscrape.Collector
+package zotscrape.collector
 
 import akka.actor._
 import akka.routing.FromConfig
-import scala.collection.mutable.ListBuffer
 import zotscrape.WebSoc
-import zotscrape.Catalogue.CatalogueService
+
+import scala.collection.mutable.ListBuffer
 
 
 object CollectorService {
@@ -12,12 +12,12 @@ object CollectorService {
   case class QueueScrapeTask(todo: Todo)
   case class Start(targetQuarters: Seq[String], departments: Seq[String])
   case class Todo(quarter: String, department: String, retryCount: Int = 0)
-  case class Document(quarter: String, department: String, websoc: WebSoc)
+  case class Document(courses: String, department: String, websoc: WebSoc)
 }
 
 class CollectorService(baseUrl: String, debug: Boolean, catalogueService: ActorRef)
   extends Actor with ActorLogging {
-  import CollectorService._
+  import zotscrape.collector.CollectorService._
 
   val pageScraperRouter = context.actorOf(Props(classOf[ScraperWorker], baseUrl, self)
     .withRouter(FromConfig()), "ScraperWorkerRouter")

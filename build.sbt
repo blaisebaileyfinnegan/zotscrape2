@@ -1,42 +1,29 @@
-import spray.revolver.RevolverPlugin._
-import SbtGruntPlugin._
-
 name := """zotscrape2"""
 
-version := "1.0"
+version := "0.1.0"
 
-scalaVersion := "2.10.3"
-
-scalacOptions ++= Seq("-feature")
-
-resolvers ++= Seq(
-  "spray repo" at "http://repo.spray.io/",
-  "spray nightly repo" at "http://nightlies.spray.io/"
-)
-
-seq(Revolver.settings: _*)
-
-seq(SbtGruntPlugin.settings: _*)
-
-mainClass in Revolver.reStart := Some("antbutter.Boot")
+scalaVersion := "2.11.1"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor" % "2.2.4",
-  "com.typesafe.akka" %% "akka-testkit" % "2.2.1",
-  "com.typesafe.akka" %% "akka-remote" % "2.2.3",
-  "org.scalatest" % "scalatest_2.10" % "2.0" % "test",
-  "com.typesafe" % "config" % "1.0.0",
+  "com.typesafe.akka" %% "akka-actor" % "2.3.4",
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.4",
+  "com.typesafe.akka" %% "akka-remote" % "2.3.4",
+  "org.scalatest" %% "scalatest" % "2.2.0" % "test",
+  "com.typesafe" % "config" % "1.2.1",
   "org.jsoup" % "jsoup" % "1.7.2",
-  "org.scalaj" %% "scalaj-http" % "0.3.12",
-  "com.github.nscala-time" %% "nscala-time" % "0.6.0",
-  "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
-  "com.typesafe.slick" %% "slick" % "2.0.0",
+  "org.scalaj" %% "scalaj-http" % "0.3.15",
+  "com.github.nscala-time" %% "nscala-time" % "1.2.0",
+  "com.typesafe.scala-logging" % "scala-logging_2.11" % "3.0.0",
+  "com.typesafe.slick" %% "slick" % "2.1.0-M2",
   "mysql" % "mysql-connector-java" % "5.1.29",
-  "io.spray" % "spray-can" % "1.2.0",
-  "io.spray" % "spray-routing" % "1.2.0",
-  "io.spray" %%  "spray-json" % "1.2.5"
+  "org.scalatra" %% "scalatra" % "2.3.0",
+  "org.scalatra" %% "scalatra-json" % "2.3.0",
+  "org.json4s"   %% "json4s-jackson" % "3.2.10",
+  "org.eclipse.jetty" % "jetty-server" % "8.1.15.v20140411",
+  "org.eclipse.jetty" % "jetty-webapp" % "8.1.15.v20140411"
 )
 
-ScoverageSbtPlugin.instrumentSettings
+mainClass in Revolver.reStart := Some("Boot")
 
+Revolver.settings
 

@@ -1,14 +1,13 @@
-package zotscrape.Writer
+package zotscrape.writer
 
 import akka.actor._
+import zotscrape.catalogue.{CatalogueInfo, CatalogueService}
+import zotscrape.collector.CollectorService
+import zotscrape.WebSoc
+
 import scala.slick.driver.MySQLDriver
 import scala.slick.driver.MySQLDriver.simple._
 import scala.slick.jdbc.meta.MTable
-import scala.concurrent._
-import ExecutionContext.Implicits.global
-import zotscrape.Collector.CollectorService
-import zotscrape.WebSoc
-import zotscrape.Catalogue.{CatalogueService, CatalogueInfo}
 
 object WriterService {
   case object CreateSchema
@@ -25,24 +24,30 @@ class WriterService(jdbcUrl: String,
                     username: String,
                     password: String,
                     timestamp: java.sql.Timestamp) extends Actor with ActorLogging {
-  import Writer._
+  import zotscrape.writer.Writer._
 
   var awaiting: Long = 0
   var pendingCatalogueInfos: List[CatalogueInfo] = Nil
-  var catalogueServiceDone: Boolean = false
+  var canShutdown: Boolean = false
 
   implicit val session: MySQLDriver.backend.Session =
     MySQLDriver.simple.Database.forURL(jdbcUrl, username, password).createSession()
 
   def receive = {
     case WriterService.TryShutdown => {
-      if (awaiting == 0 && catalogueServiceDone && pendingCatalogueInfos.isEmpty) {
+      if (awaiting == 0 && canShutdown && pendingCatalogueInfos.isEmpty) {
+        log.info("Shutting down writer service.")
         context.parent ! WriterService.Done
       }
     }
 
+    case CollectorService.Done => {
+      canShutdown = true
+      self ! WriterService.TryShutdown
+    }
+
     case CatalogueService.Done => {
-      catalogueServiceDone = true
+      canShutdown = true
       self ! WriterService.TryShutdown
     }
 
@@ -68,7 +73,7 @@ class WriterService(jdbcUrl: String,
     }
 
     case WriterService.WriteHistory => session asDynamicSession {
-      if (Schema.history.where(_.timestamp === timestamp).exists.run) {
+      if (Schema.history.filter(_.timestamp === timestamp).exists.run) {
         throw new Error("Timestamp " + timestamp + " already found in database. Cannot insert.")
       } else {
         log.info("Writing " + timestamp + " to history.")
@@ -78,7 +83,7 @@ class WriterService(jdbcUrl: String,
       }
     }
 
-    case CollectorService.Document(quarter, department, websoc) => session asDynamicSession Future {
+    case CollectorService.Document(quarter, department, websoc) => session asDynamicSession {
       awaiting += 1
 
       if (websoc.term.isEmpty) {
@@ -111,11 +116,11 @@ class WriterService(jdbcUrl: String,
           case (sectionId, section) =>
             section.restrictions foreach (_.foreach { restriction => insertSectionRestriction(restriction)(sectionId) })
             section.meetings filter { m =>
-              !m.time.isEmpty &&
-              !m.building.isEmpty &&
-              !m.room.isEmpty
+              m.time.nonEmpty &&
+              m.building.nonEmpty &&
+              m.room.nonEmpty
             } foreach { meeting => insertMeeting(meeting)(sectionId) }
-            section.secFinal filter (!_.date.isEmpty) foreach { finale => insertFinal(finale)(sectionId) }
+            section.secFinal filter (_.date.nonEmpty) foreach { finale => insertFinal(finale)(sectionId) }
             section.instructors foreach { instructor => insertInstructor(instructor)(sectionId) }
             section.enrollment foreach { enrollment => insertEnrollment(enrollment)(sectionId) }
         }
@@ -127,13 +132,16 @@ class WriterService(jdbcUrl: String,
     case WriterService.DocumentDone(quarter, department, failed) => {
       awaiting -= 1
 
+      log.info("Saved " + department + " in " + quarter)
       if (failed) {
         log.error(department + " in " + quarter + " failed.")
       }
+
+      self ! WriterService.TryShutdown
     }
 
     case WriterService.Start => session asDynamicSession {
-      if (MTable.getTables("history").list().isEmpty) {
+      if (MTable.getTables("history").list.isEmpty) {
         self ! WriterService.CreateSchema
       } else {
         self ! WriterService.WriteHistory

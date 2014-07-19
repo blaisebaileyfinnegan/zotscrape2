@@ -1,29 +1,15 @@
-package zotscrape.Collector
+package zotscrape.collector
 
-import scala.xml.{Elem, Node}
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.language.implicitConversions
-
-import com.typesafe.scalalogging.slf4j.Logging
-
-import zotscrape.WebSoc._
-import zotscrape.WebSoc.CourseList
-import scala.Some
-import zotscrape.WebSoc.Section
-import zotscrape.WebSoc.Final
-import zotscrape.WebSoc.Meeting
-import zotscrape.WebSoc.Term
-import zotscrape.WebSoc.Restriction
-import zotscrape.WebSoc.Metadata
-import zotscrape.WebSoc.Days
-import zotscrape.WebSoc.Course
-import zotscrape.WebSoc.Department
-import zotscrape.WebSoc.School
-import zotscrape.WebSoc.Enrollment
+import com.typesafe.scalalogging.LazyLogging
 import zotscrape.WebSoc
+import zotscrape.WebSoc.{Course, CourseList, Days, Department, Enrollment, Final, Meeting, Metadata, Restriction, School, Section, Term, _}
 
-object DocumentParser extends Logging {
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.language.implicitConversions
+import scala.xml.{Elem, Node}
+
+object DocumentParser extends LazyLogging {
 
   implicit def convertOptionStringToInt(s: Option[String]): Option[Int] = s.map(Integer.valueOf(_))
 

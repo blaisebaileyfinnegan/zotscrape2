@@ -1,42 +1,56 @@
-package zotscrape.Catalogue
+package zotscrape.catalogue
+
+import java.util.concurrent.atomic.AtomicLong
 
 import akka.actor._
-import akka.routing.FromConfig
-import akka.pattern.ask
-
-import zotscrape.Collector.CollectorService
-import scala.util.{Failure, Success}
 import com.typesafe.config.ConfigObject
+import zotscrape.collector.CollectorService
+import zotscrape.WebSoc.Course
 
-import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
+import scalaj.http.{Http, HttpOptions}
 
 object CatalogueService {
   case object Done
   case object TryShutdown
 }
 
-class CatalogueService(disabled: Boolean, url: String, params: ConfigObject, writerService: ActorRef)
+class CatalogueService(url: String, params: ConfigObject, writerService: ActorRef)
   extends Actor with ActorLogging {
-  val catalogueWorkerRouter: Option[ActorRef] =
-    if (disabled) None
-    else Some(context.actorOf(Props(classOf[CatalogueScraperWorker], url, params).withRouter(FromConfig()), "CatalogueRouter"))
 
-  var remaining: Long = 0
+  val remaining: AtomicLong = new AtomicLong(0)
 
   override def receive = {
-    case document: CollectorService.Document => {
-      writerService ! CollectorService.Document
+    case document @ CollectorService.Document(courses, department, websoc) => {
+      writerService ! document
 
-      catalogueWorkerRouter foreach { c =>
-        remaining += 1
-        (c ? document)(1.minute).mapTo[CatalogueInfo] andThen {
-          case Success(catalogueInfo) => writerService ! catalogueInfo
-          case Failure(exception) => log.info(exception.toString)
-        } andThen {
-          case _ => remaining -= 1
-        } andThen {
-          case _ => self ! CatalogueService.TryShutdown
+      val courses: Iterable[(String, Course)] = for {
+        courseList <- websoc.courseList.toList
+        school <- courseList.schools
+        dept <- school.departments
+        course <- dept.courses
+      } yield (course.number.get, course)
+
+      remaining.getAndAdd(courses.size)
+
+      courses foreach { c =>
+        Future {
+          Http(url).options(HttpOptions.connTimeout(5000))
+            .options(HttpOptions.readTimeout(5000))
+            .params(params.unwrapped().asScala.toMap.mapValues(_.toString))
+            .param("code", department + " " + c._1)
+            .asXml
+        } map { elem =>
+          writerService ! CatalogueInfo(elem.toString(), "")
+        } onComplete {
+          case _ => {
+            remaining.getAndDecrement
+            log.info("Remaining catalogues " + remaining)
+            self ! CatalogueService.TryShutdown
+          }
         }
       }
     }
@@ -46,7 +60,8 @@ class CatalogueService(disabled: Boolean, url: String, params: ConfigObject, wri
     }
 
     case CatalogueService.TryShutdown => {
-      if (remaining == 0) {
+      if (remaining.get() == 0) {
+        log.info("Shutting down catalogue service.")
         writerService ! CatalogueService.Done
         self ! PoisonPill
       }

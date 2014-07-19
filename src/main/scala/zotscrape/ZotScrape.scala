@@ -1,18 +1,17 @@
 package zotscrape
 
-import antbutter._
-
-import akka.actor.{ActorRef, Props, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, Props}
+import com.typesafe.config.ConfigFactory
 
 object Main extends App with ConfigProvider {
-  override val configService = new Config
+  override val configService = new Config(None)
 
-  ZotScrape.apply(configService)
+  ZotScrape(configService)
 }
 
 object ZotScrape {
   def apply(config: Main.Config) {
-    val system = ActorSystem("zotscrape-solo")
+    val system = ActorSystem("zotscrape-solo", config.config)
     scrape(config, system)
   }
 
@@ -26,8 +25,8 @@ object ZotScrape {
         config.Jdbc.url,
         config.Jdbc.username,
         config.Jdbc.password,
-        config.Scraper.Catalogue.disabled,
         config.Scraper.Catalogue.url,
+        false,
         config.Scraper.Catalogue.params,
         timestamp,
         consumer),
